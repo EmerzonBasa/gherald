@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CRL Filing System{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+        <div class="stat-value">{{ stats.total_documents or 0 }}</div>
+        <div class="stat-label">Total Documents</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-database"></i></div>
+        <div class="stat-value">{{ "%.2f"|format((stats.total_size or 0) / (1024*1024)) }} MB</div>
+        <div class="stat-label">Storage Used</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-file-pdf"></i></div>
+        <div class="stat-value">{{ stats.total_pages or 0 }}</div>
+        <div class="stat-label">Total Pages</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-building"></i></div>
+        <div class="stat-value">{{ companies|length }}</div>
+        <div class="stat-label">Companies</div>
+    </div>
+</div>
+
+<div class="glass-card" style="margin-bottom: 2rem;">
+    <h3 style="color: var(--info); margin-bottom: 1.5rem;">
+        <i class="fas fa-building"></i> Company Quick Access
+    </h3>
+    <div class="stats-grid">
+        {% for company in companies %}
+        <a href="{{ url_for('documents', company_id=company.company_id) }}" style="text-decoration: none;">
+            <div class="stat-card" style="cursor: pointer;">
+                <div class="stat-icon"><i class="fas fa-folder"></i></div>
+                <div class="stat-value" style="font-size: 24px;">{{ company.company_name }}</div>
+                <div class="stat-label">View Documents</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="glass-card">
+    <h3 style="color: var(--success); margin-bottom: 1.5rem;">
+        <i class="fas fa-clock"></i> Recent Uploads
+    </h3>
+    {% if recent_documents %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Company</th>
+                    <th>Category</th>
+                    <th>Uploaded By</th>
+                    <th>Date</th>
+                    <th>Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in recent_documents %}
+                <tr>
+                    <td>
+                        <i class="fas fa-file-pdf" style="color: var(--highlight); margin-right: 8px;"></i>
+                        {{ doc.file_name[:50] }}{% if doc.file_name|length > 50 %}...{% endif %}
+                    </td>
+                    <td><span class="badge badge-primary">{{ doc.company_name }}</span></td>
+                    <td>{{ doc.category_name }}</td>
+                    <td>{{ doc.uploader_name }}</td>
+                    <td>{{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ "%.2f"|format(doc.file_size / 1024) }} KB</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+        <i class="fas fa-inbox"></i><br>
+        No documents uploaded yet
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

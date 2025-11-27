@@ -1,0 +1,118 @@
+// {% extends "base.html" %}
+
+{% block title %}Recycle Bin - CRL Filing System{% endblock %}
+
+{% block page_title %}Recycle Bin{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <i class="fas fa-trash-restore" style="font-size: 32px; color: var(--warning);"></i>
+        <div>
+            <h3 style="color: var(--warning); margin: 0;">Deleted Documents</h3>
+            <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">
+                Documents in recycle bin can be restored or permanently deleted
+            </p>
+        </div>
+    </div>
+</div>
+
+<form id="batchForm" method="POST">
+    <button type="submit" formaction="/recycle-bin/batch-restore" class="btn-3d restore-selected">
+        Restore Selected
+    </button>
+   
+    <button type="submit" formaction="/recycle-bin/batch-delete" class="btn-3d delete-selected" 
+        onclick="return confirm('Permanently delete selected documents? This cannot be undone!');">
+        Delete Selected
+    </button>
+
+    <div class="table-container">
+       {% if deleted_documents %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select_all"></th>
+                    <th>File Name</th>
+                    <th>Company</th>
+                    <th>Category</th>
+                    <th>Uploaded By</th>
+                    <th>Deleted Date</th>
+                    <th>Size</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in deleted_documents %}    
+                <tr>
+                    <td>
+                      <input type="checkbox" class="doc-checkbox" name="doc_ids" value="{{ doc.document_id }}">
+                    </td>
+                    <td>
+                        <i class="fas fa-file-pdf" style="color: var(--text-secondary); margin-right: 8px;"></i>
+                        {{ doc.file_name[:50] }}{% if doc.file_name|length > 50 %}...{% endif %}
+                    </td>
+                    <td><span class="badge badge-primary">{{ doc.company_name }}</span></td>
+                    <td><small style="color: var(--text-secondary);">{{ doc.category_name }}</small></td>
+                    <td>{{ doc.uploader_name }}</td>
+                    <td>{{ doc.deleted_at.strftime('%Y-%m-%d %H:%M') if doc.deleted_at else '-' }}</td>
+                    <td>{{ "%.2f"|format(doc.file_size / 1024) }} KB</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button type="submit" formaction="{{ url_for('restore_document', document_id=doc.document_id) }}" class="btn-icon" style="background: rgba(6, 255, 165, 0.2); color: var(--success);" title="Restore">
+                             <i class="fas fa-undo"></i>
+                             </button>
+
+                             <button type="submit" formaction="{{ url_for('permanent_delete_document', document_id=doc.document_id) }}" class="btn-icon delete" title="Delete Permanently" onclick="return confirm('Permanently delete this document? This action cannot be undone!');">
+                                  <i class="fas fa-trash-alt"></i>
+                             </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+            <i class="fas fa-trash" style="font-size: 64px; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <h3>Recycle Bin is Empty</h3>
+            <p>No deleted documents</p>
+        </div>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select_all');
+    const checkboxes = document.querySelectorAll('.doc-checkbox');
+
+    console.log('selectAllCheckbox found:', selectAllCheckbox);  // Debug: Should log the element or null
+    console.log('checkboxes found:', checkboxes.length);  // Debug: Should log the number of checkboxes
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            console.log('Select all changed to:', selectAllCheckbox.checked);  // Debug: Should log when clicked
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+        });
+    }
+
+    // Optional: if any individual checkbox is unchecked, uncheck "select all"
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            console.log('Individual checkbox changed');  // Debug: Should log when an individual is clicked
+            if (!cb.checked) {
+                selectAllCheckbox.checked = false;
+            } else {
+                // if all checkboxes are checked, check "select all"
+                selectAllCheckbox.checked = Array.from(checkboxes).every(c => c.checked);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

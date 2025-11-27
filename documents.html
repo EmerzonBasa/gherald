@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Documents - CRL Filing System{% endblock %}
+
+{% block page_title %}Document Repository{% endblock %}
+
+{% block content %}
+<!-- Search Bar -->
+<div class="search-container">
+    <form method="GET" action="{{ url_for('documents') }}">
+        <input type="text" name="search" class="search-bar" placeholder="Search documents by name, description, or AO name&hellip;" value="{{ search }}">
+        <i class="fas fa-search search-icon"></i>
+        {% if current_company %}<input type="hidden" name="company_id" value="{{ current_company }}">{% endif %}
+        {% if current_category %}<input type="hidden" name="category_id" value="{{ current_category }}">{% endif %}
+        {% if current_year %}<input type="hidden" name="year" value="{{ current_year }}">{% endif %}
+        {% if current_month %}<input type="hidden" name="month" value="{{ current_month }}">{% endif %}
+    </form>
+</div>
+
+<!-- Filter Section -->
+<div class="filter-section">
+    <h4 style="color: var(--info); margin-bottom: 1rem;"><i class="fas fa-filter"></i> Filters</h4>
+    <form method="GET" action="{{ url_for('documents') }}">
+        <div class="filter-grid">
+            <div class="filter-item">
+                <label class="form-label">Company</label>
+                <select name="company_id" class="form-input" onchange="this.form.submit()">
+                    <option value="">All Companies</option>
+                    {% for company in companies %}
+                    <option value="{{ company.company_id }}" {% if current_company == company.company_id %}selected{% endif %}>
+                        {{ company.company_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label class="form-label">Category</label>
+                <select name="category_id" class="form-input" onchange="this.form.submit()">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.category_id }}" {% if current_category == category.category_id %}selected{% endif %}>
+                        {{ category.category_path }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label class="form-label">Year</label>
+                <select name="year" class="form-input" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    {% for year in years %}
+                    <option value="{{ year }}" {% if current_year == year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label class="form-label">Month</label>
+                <select name="month" class="form-input" onchange="this.form.submit()">
+                    <option value="">All Months</option>
+                    {% for i in range(1, 13) %}
+                    <option value="{{ i }}" {% if current_month == i %}selected{% endif %}>
+                        {{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][i-1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        {% if current_company or current_category or current_year or current_month or search %}
+        <div style="margin-top: 1rem;">
+            <a href="{{ url_for('documents') }}" class="btn-3d btn-secondary">
+                <i class="fas fa-times"></i> Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Documents Table -->
+<div class="table-container">
+    {% if documents %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Company</th>
+                <th>Category</th>
+                <th>AO Name</th>
+                <th>Year/Month</th>
+                <th>Pages</th>
+                <th>Size</th>
+                <th>Uploaded</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr>
+                <td>
+                    <i class="fas fa-file-pdf" style="color: var(--highlight); margin-right: 8px;"></i>
+                    <strong>{{ doc.file_name[:40] }}{% if doc.file_name|length > 40 %}...{% endif %}</strong>
+                    {% if doc.file_description %}
+                    <br><small style="color: var(--text-secondary);">{{ doc.file_description[:50] }}{% if doc.file_description|length > 50 %}...{% endif %}</small>
+                    {% endif %}
+                </td>
+                <td><span class="badge badge-primary">{{ doc.company_name }}</span></td>
+                <td><small style="color: var(--text-secondary);">{{ doc.category_name }}</small></td>
+                <td>{{ doc.ao_name or '-' }}</td>
+                <td>
+                    {% if doc.document_year %}
+                        {{ doc.document_year }}
+                        {% if doc.document_month %}/{{ "%02d"|format(doc.document_month) }}{% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ doc.page_count or 0 }}</td>
+                <td>{{ "%.2f"|format(doc.file_size / 1024) }} KB</td>
+                <td>
+                    <small>{{ doc.uploaded_at.strftime('%Y-%m-%d') }}</small><br>
+                    <small style="color: var(--text-secondary);">{{ doc.uploader_name }}</small>
+                </td>
+                <td>
+                    <div class="action-buttons">
+
+                            <!-- VIEW button -->
+                            {% if current_user.can_view %}
+                            <button type="button" class="btn-icon view" title="View"
+                                    onclick="window.open('/document/{{ doc.document_id }}/view', '_blank')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% endif %}
+
+                            <!-- DOWNLOAD button -->
+                            {% if current_user.can_print %}
+                            <button type="button" class="btn-icon download" title="Download"
+                                    onclick="window.location.href='/document/{{ doc.document_id }}/download'">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            {% endif %}
+
+                            <!-- DELETE button -->
+                            {% if current_user.can_delete %}
+                            <form method="POST" action="{{ url_for('delete_document', document_id=doc.document_id) }}"
+                                style="display:inline;" onsubmit="return confirm('Move this document to recycle bin?');">
+                                <button type="submit" class="btn-icon delete" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+        <i class="fas fa-inbox" style="font-size: 64px; margin-bottom: 1rem; opacity: 0.5;"></i>
+        <h3>No Documents Found</h3>
+        <p>Try adjusting your filters or search criteria</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function viewDocument(docId) {
+    window.open('/document/' + docId + '/view', '_blank');
+}
+
+function downloadDocument(docId) {
+    window.location.href = '/document/' + docId + '/download';
+}
+</script>
+{% endblock %}

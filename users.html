@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - CRL Filing System{% endblock %}
+
+{% block page_title %}User Settings & Access Management{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <i class="fas fa-users-cog" style="font-size: 32px; color: var(--success);"></i>
+            <div>
+                <h3 style="color: var(--success); margin: 0;">User Management</h3>
+                <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">
+                    Manage users and their access permissions
+                </p>
+            </div>
+        </div>
+        {% if current_user.role == 'admin' %}
+        <button class="btn-3d btn-primary" onclick="showAddUserModal()">
+            <i class="fas fa-user-plus"></i> Add New User
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="table-container">
+    {% if users %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Permissions</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="user-avatar" style="width: 40px; height: 40px;">
+                            {{ user.full_name[0].upper() }}
+                        </div>
+                        <div>
+                            <div style="font-weight: 600;">{{ user.full_name }}</div>
+                            <div style="color: var(--text-secondary); font-size: 12px;">@{{ user.username }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                    <span class="badge badge-{% if user.role == 'admin' %}primary{% elif user.role == 'manager' %}success{% else %}info{% endif %}">
+                        {{ user.role.upper() }}
+                    </span>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                        {% if user.can_view %}<span class="badge badge-info" style="font-size: 10px;">View</span>{% endif %}
+                        {% if user.can_edit %}<span class="badge badge-warning" style="font-size: 10px;">Edit</span>{% endif %}
+                        {% if user.can_upload %}<span class="badge badge-success" style="font-size: 10px;">Upload</span>{% endif %}
+                        {% if user.can_delete %}<span class="badge badge-primary" style="font-size: 10px;">Delete</span>{% endif %}
+                        {% if user.can_print %}<span class="badge badge-info" style="font-size: 10px;">Print</span>{% endif %}
+                    </div>
+                </td>
+                <td>
+                    {% if user.is_active %}
+                    <span class="badge badge-success">Active</span>
+                    {% else %}
+                    <span class="badge" style="background: rgba(128, 128, 128, 0.2); color: #888;">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.last_login %}
+                    {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                    <span style="color: var(--text-secondary);">Never</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if current_user.role == 'admin' and user.user_id != current_user.id %}
+                    <button class="btn-icon edit" title="Edit Permissions"
+                        data-user-id="{{ user.user_id }}"
+                        data-full-name="{{ user.full_name }}"
+                        data-role="{{ user.role }}"
+                        data-can-view="{{ user.can_view }}"
+                        data-can-edit="{{ user.can_edit }}"
+                        data-can-upload="{{ user.can_upload }}"
+                        data-can-delete="{{ user.can_delete }}"
+                        data-can-print="{{ user.can_print }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    {% else %}
+                        <span style="color: var(--text-secondary); font-size: 12px;">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="addUserModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add New User</h3>
+        </div>
+        <form method="POST" action="{{ url_for('add_user') }}">
+            <div>
+                <label class="form-label">Full Name</label>
+                <input type="text" name="full_name" class="form-input" required>
+            </div>
+            <div>
+                <label class="form-label">Username</label>
+                <input type="text" name="username" class="form-input" required>
+            </div>
+            <div>
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-input" required>
+            </div>
+            <div>
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-input" required>
+            </div>
+            <div>
+                <label class="form-label">Role</label>
+                <select name="role" class="form-input" required>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn-3d btn-success" style="flex: 1;">
+                    <i class="fas fa-save"></i> Create User
+                </button>
+                <button type="button" class="btn-3d btn-secondary" style="flex: 1;" onclick="closeModal('addUserModal')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit User Permissions</h3>
+            <p id="editUserName" style="color: var(--text-secondary); margin-top: 0.5rem;"></p>
+        </div>
+        <form id="editUserForm">
+            <input type="hidden" id="editUserId">
+
+            <div>
+                <label class="form-label">Role</label>
+                <select id="editRole" class="form-input">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <label class="form-label">Permissions</label>
+                <div style="display: grid; gap: 1rem; padding: 1rem; background: rgba(15, 52, 96, 0.2); border-radius: 12px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="editCanView" style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                        <span><i class="fas fa-eye" style="margin-right: 8px; color: var(--info);"></i> Can View Documents</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="editCanEdit" style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                        <span><i class="fas fa-edit" style="margin-right: 8px; color: var(--warning);"></i> Can Edit Documents</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="editCanUpload" style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                        <span><i class="fas fa-upload" style="margin-right: 8px; color: var(--success);"></i> Can Upload Documents</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="editCanDelete" style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                        <span><i class="fas fa-trash" style="margin-right: 8px; color: var(--highlight);"></i> Can Delete Documents</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="editCanPrint" style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                        <span><i class="fas fa-print" style="margin-right: 8px; color: var(--info);"></i> Can Print Documents</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn-3d btn-success" style="flex: 1;">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button type="button" class="btn-3d btn-secondary" style="flex: 1;" onclick="closeModal('editUserModal')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showAddUserModal() {
+    document.getElementById('addUserModal').classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function editUser(user) {
+    document.getElementById('editUserId').value = user.userId;
+    document.getElementById('editUserName').textContent = user.fullName;
+    document.getElementById('editRole').value = user.role;
+    document.getElementById('editCanView').checked = user.canView;
+    document.getElementById('editCanEdit').checked = user.canEdit;
+    document.getElementById('editCanUpload').checked = user.canUpload;
+    document.getElementById('editCanDelete').checked = user.canDelete;
+    document.getElementById('editCanPrint').checked = user.canPrint;
+
+    document.getElementById('editUserModal').classList.add('active');
+}
+
+document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const userId = document.getElementById('editUserId').value;
+    const data = {
+        role: document.getElementById('editRole').value,
+        can_view: document.getElementById('editCanView').checked,
+        can_edit: document.getElementById('editCanEdit').checked,
+        can_upload: document.getElementById('editCanUpload').checked,
+        can_delete: document.getElementById('editCanDelete').checked,
+        can_print: document.getElementById('editCanPrint').checked
+    };
+
+    try {
+        const response = await fetch(`/settings/users/${userId}/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert('User permissions updated successfully!');
+            location.reload();
+        } else {
+            alert('Failed to update user permissions.');
+        }
+    } catch (error) {
+        alert('Error updating user permissions.');
+    }
+});
+
+// Close modal when clicking outside
+document.querySelectorAll('.modal-overlay').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.remove('active');
+        }
+    });
+});
+</script>
+{% endblock %}

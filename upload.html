@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Documents - CRL Filing System{% endblock %}
+
+{% block page_title %}Upload Documents{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <form method="POST" action="{{ url_for('upload_documents') }}" enctype="multipart/form-data" id="uploadForm">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div>
+                <label class="form-label"><i class="fas fa-building"></i> Company *</label>
+                <select name="company_id" class="form-input" required>
+                    <option value="">Select Company</option>
+                    {% for company in companies %}
+                    <option value="{{ company.company_id }}">{{ company.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="form-label"><i class="fas fa-folder"></i> Category *</label>
+                <select name="category_id" class="form-input" required>
+                    <option value="">Select Category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.category_id }}">{{ category.category_path }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="form-label"><i class="fas fa-user"></i> AO Name</label>
+                <input type="text" name="ao_name" class="form-input" placeholder="Action Officer Name">
+            </div>
+
+            <div>
+                <label class="form-label"><i class="fas fa-calendar"></i> Document Year</label>
+                <input type="number" name="document_year" class="form-input" placeholder="e.g., 2025" min="2000" max="2060">
+            </div>
+
+            <div>
+                <label class="form-label"><i class="fas fa-calendar-alt"></i> Document Month</label>
+                <select name="document_month" class="form-input">
+                    <option value="">Select Month</option>
+                    {% for i in range(1, 13) %}
+                    <option value="{{ i }}">{{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][i-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="form-label"><i class="fas fa-calendar-check"></i> Received Date</label>
+                <input type="date" name="scanned_date" class="form-input">
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+                <label class="form-label"><i class="fas fa-map-marker-alt"></i> Storage Location</label>
+                <input type="text" name="storage_location" class="form-input" placeholder="Physical storage location for easy retrieval">
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+                <label class="form-label"><i class="fas fa-info-circle"></i> File Description</label>
+                <textarea name="file_description" class="form-input" rows="3" placeholder="Enter document description..."></textarea>
+            </div>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h3 style="color: var(--text-primary); margin-bottom: 0.5rem;">Upload PDF Files</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Drag and drop files here or click to browse
+            </p>
+            <input type="file" name="files" id="fileInput" multiple accept=".pdf" style="display: none;">
+            <button type="button" class="btn-3d btn-secondary" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-folder-open"></i> Browse Files
+            </button>
+            <p style="color: var(--text-secondary); font-size: 12px; margin-top: 1rem;">
+                <i class="fas fa-info-circle"></i> Multiple PDF files supported (Max 50MB each)
+            </p>
+        </div>
+
+        <div id="fileList" style="margin-top: 1.5rem;"></div>
+
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+            <button type="submit" class="btn-3d btn-success" id="uploadBtn" disabled>
+                <i class="fas fa-upload"></i> Upload Documents
+            </button>
+            <button type="reset" class="btn-3d btn-secondary" onclick="clearFiles()">
+                <i class="fas fa-times"></i> Clear All
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const uploadBtn = document.getElementById('uploadBtn');
+let selectedFiles = [];
+
+// Click to upload
+uploadArea.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') {
+        fileInput.click();
+    }
+});
+
+// Drag and drop
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+});
+
+function handleFiles(files) {
+    selectedFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+    displayFiles();
+}
+
+function displayFiles() {
+    if (selectedFiles.length === 0) {
+        fileList.innerHTML = '';
+        uploadBtn.disabled = true;
+        return;
+    }
+
+    uploadBtn.disabled = false;
+    let html = '<div class="glass-card" style="padding: 1.5rem;"><h4 style="color: var(--success); margin-bottom: 1rem;"><i class="fas fa-file-pdf"></i> Selected Files (' + selectedFiles.length + ')</h4><div style="display: grid; gap: 0.8rem;">';
+
+    selectedFiles.forEach((file, index) => {
+        const size = (file.size / 1024).toFixed(2);
+        html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(15, 52, 96, 0.2); border-radius: 10px;">
+                <div style="flex: 1;">
+                    <div style="color: var(--text-primary); font-weight: 600;">
+                        <i class="fas fa-file-pdf" style="color: var(--highlight);"></i> ${file.name}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;">
+                        ${size} KB
+                    </div>
+                </div>
+                <button type="button" class="btn-icon delete" onclick="removeFile(${index})" title="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    });
+
+    html += '</div></div>';
+    fileList.innerHTML = html;
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+
+    // Update file input
+    const dt = new DataTransfer();
+    selectedFiles.forEach(file => dt.items.add(file));
+    fileInput.files = dt.files;
+
+    displayFiles();
+}
+
+function clearFiles() {
+    selectedFiles = [];
+    fileInput.value = '';
+    displayFiles();
+}
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    if (selectedFiles.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one PDF file to upload.');
+        return false;
+    }
+
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    uploadBtn.disabled = true;
+});
+</script>
+{% endblock %}

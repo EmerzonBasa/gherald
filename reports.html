@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Document Reports - CRL Filing System{% endblock %}
+
+{% block page_title %}Uploaded Documents Report{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <i class="fas fa-chart-bar" style="font-size: 32px; color: var(--info);"></i>
+            <div>
+                <h3 style="color: var(--info); margin: 0;">Document Reports</h3>
+                <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">
+                    Comprehensive report of all uploaded documents
+                </p>
+            </div>
+        </div>
+        <button class="btn-3d btn-success" onclick="exportReport()">
+            <i class="fas fa-file-excel"></i> Export to Excel
+        </button>
+    </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+        <div class="stat-value">{{ documents|length }}</div>
+        <div class="stat-label">Total Documents</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-database"></i></div>
+        <div class="stat-value">
+            {% set total_size = documents|sum(attribute='file_size') %}
+            {{ "%.2f"|format(total_size / (1024*1024)) }} MB
+        </div>
+        <div class="stat-label">Total Size</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-file-pdf"></i></div>
+        <div class="stat-value">
+            {% set total_pages = documents|sum(attribute='page_count') %}
+            {{ total_pages }}
+        </div>
+        <div class="stat-label">Total Pages</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-value">
+            {% set uploaders = documents|map(attribute='uploader_name')|unique|list %}
+            {{ uploaders|length }}
+        </div>
+        <div class="stat-label">Contributors</div>
+    </div>
+</div>
+
+<div>
+    <h3 style="color: var(--info); margin-bottom: 1rem;"><i class="fas fa-filter"></i> Filters</h3>
+</div>
+
+<div class="filter-container">
+    <label class="filter-label">
+     <div class="filter-select-wrapper">
+        <select id="companyFilter" class="filter-select">
+            <option value="">All Companies</option>
+            {% for company in documents | map(attribute='company_name') | unique %}
+                <option value="{{ company }}">{{ company }}</option>
+            {% endfor %}
+        </select>
+
+<div class="table-container">
+    {% if documents %}
+    <table class="data-table" id="reportTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>File Name</th>
+                <th>Document Type</th>
+                <th>Company</th>
+                <th>Category</th>
+                <th>Uploaded By</th>
+                <th>Upload Date</th>
+                <th>File Size</th>
+                <th>Pages</th>
+                <th>Storage Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    <i class="fas fa-file-pdf" style="color: var(--highlight); margin-right: 8px;"></i>
+                    {{ doc.file_name }}
+                </td>
+                <td><span class="badge badge-info">PDF</span></td>
+                <td><span class="badge badge-primary">{{ doc.company_name }}</span></td>
+                <td><small style="color: var(--text-secondary);">{{ doc.category_name }}</small></td>
+                <td>{{ doc.uploader_name }}</td>
+                <td>{{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ "%.2f"|format(doc.file_size / 1024) }} KB</td>
+                <td>{{ doc.page_count or 0 }}</td>
+                <td>{{ doc.storage_location or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+        <i class="fas fa-inbox" style="font-size: 64px; margin-bottom: 1rem; opacity: 0.5;"></i>
+        <h3>No Documents Found</h3>
+        <p>No documents have been uploaded yet</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function exportReport() {
+    const table = document.getElementById('reportTable');
+    let csv = [];
+
+    // Get headers
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+    csv.push(headers.join(','));
+
+    // Get rows
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(td => {
+            let text = td.textContent.trim();
+            // Handle commas and quotes in CSV
+            if (text.includes(',') || text.includes('"')) {
+                text = '"' + text.replace(/"/g, '""') + '"';
+            }
+            return text;
+        });
+        csv.push(cells.join(','));
+    });
+
+    // Download CSV
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'CRL_Document_Report_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

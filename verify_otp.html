@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}OTP Verification - CRL Filing System{% endblock %}
+
+{% block login_content %}
+<div class="login-container">
+    <div class="login-card glass-card">
+        <div class="login-header">
+            <h1><i class="fas fa-shield-alt"></i> OTP Verification</h1>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Enter the 6-digit code sent to your email</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'error' else 'info-circle' }}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('verify_otp') }}" id="otpForm">
+            <div class="otp-input-group">
+                <input type="text" maxlength="1" class="otp-input" data-index="0" required>
+                <input type="text" maxlength="1" class="otp-input" data-index="1" required>
+                <input type="text" maxlength="1" class="otp-input" data-index="2" required>
+                <input type="text" maxlength="1" class="otp-input" data-index="3" required>
+                <input type="text" maxlength="1" class="otp-input" data-index="4" required>
+                <input type="text" maxlength="1" class="otp-input" data-index="5" required>
+            </div>
+            <input type="hidden" name="otp" id="otpValue">
+
+            <button type="submit" class="btn-3d btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fas fa-check"></i> Verify OTP
+            </button>
+        </form>
+
+        <div style="margin-top: 2rem; text-align: center;">
+            <p style="color: var(--text-secondary); font-size: 14px;">
+                <i class="fas fa-clock"></i> OTP expires in 10 minutes
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.otp-input');
+    const form = document.getElementById('otpForm');
+    const otpValue = document.getElementById('otpValue');
+
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', function(e) {
+            if (this.value.length === 1) {
+                if (index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            }
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && this.value === '') {
+                if (index > 0) {
+                    inputs[index - 1].focus();
+                }
+            }
+        });
+
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pasteData = e.clipboardData.getData('text');
+            const digits = pasteData.replace(/\D/g, '').split('');
+
+            digits.forEach((digit, i) => {
+                if (inputs[i]) {
+                    inputs[i].value = digit;
+                }
+            });
+
+            if (digits.length > 0) {
+                const lastIndex = Math.min(digits.length - 1, inputs.length - 1);
+                inputs[lastIndex].focus();
+            }
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        let otp = '';
+        inputs.forEach(input => {
+            otp += input.value;
+        });
+        otpValue.value = otp;
+    });
+
+    inputs[0].focus();
+});
+</script>
+{% endblock %}

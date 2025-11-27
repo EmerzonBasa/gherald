@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Login - CRL Filing System{% endblock %}
+
+{% block login_content %}
+<div class="login-container">
+    <div class="login-card glass-card">
+        <div class="login-header">
+            <h1><i class="fas fa-folder-open"></i> CRL FILING</h1>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Digital Document Management System</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'error' else 'info-circle' }}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+
+<form method="POST" action="{{ url_for('login') }}">
+    <div>
+        <label for="username" class="form-label">
+            <i class="fas fa-user"></i> Username
+        </label>
+        <input type="text" id="username" name="username" autocomplete="username" class="form-input" placeholder="Enter your username" required autofocus>
+    </div>
+
+    <div>
+        <label for="password" class="form-label">
+            <i class="fas fa-lock"></i> Password
+        </label>
+        <input type="password" id="password" name="password" autocomplete="current-password" class="form-input" placeholder="Enter your password" required>
+    </div>
+
+    <button type="submit" class="btn-3d btn-primary" style="width: 100%; margin-top: 1rem;">
+        <i class="fas fa-sign-in-alt"></i> Login
+    </button>
+</form>
+
+
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); text-align: center; color: var(--text-secondary); font-size: 14px;">
+            <p><i class="fas fa-shield-alt"></i> Secure Login with OTP Verification</p>
+        </div>
+    </div>  
+</div>
+{% endblock %}
